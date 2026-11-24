@@ -128,7 +128,7 @@ apiInstance.interceptors.request.use((config) => {
 3. Соберите объект `user` из полей `username` и `password`.
 4. Вызовите `api.loginUser(user)`, результат передайте в `setSession`.
 5. После успеха перейдите на главную страницу.
-6. В разметке выведите ошибку `{error && <div className="alert alert-error active">{error}</div>}`.
+6. В разметке выведите ошибку `{error && <div classNameName="alert alert-error active">{error}</div>}`.
 
 ### 3.2. Регистрация (`Register.jsx`)
 
