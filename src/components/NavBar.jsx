@@ -1,34 +1,42 @@
-import { Link } from 'react-router-dom'
+import { Link } from "react-router-dom";
+import { useUserStore } from "../store/useUserStore";
 
 const NavBar = () => {
+    const session = useUserStore((a) => a.session);
+
     return (
         <div className="container">
             <header>
                 <nav>
-                    <a href="/" class="logo">
-                        🛒 Маркетплейс
+                    <a href="/" className="logo">
+                        🛒 ПенисМаркет
                     </a>
 
-                    <ul class="nav-links" id="guest-nav">
+                    <ul className="nav-links" id="guest-nav">
                         <li>
-                            <Link to={'/'}>Домой</Link>
+                            <Link to={"/"}>Домой</Link>
                         </li>
-                        <li>
-                            <Link to={'/login'}>Войти</Link>
-                        </li>
-                        <>
+                        {session ? (
+                            <>
+                                <li>
+                                    <Link to={"/create-item"}>
+                                        Создать товар
+                                    </Link>
+                                </li>
+                                <li>
+                                    <Link to={"/logout"}>Выйти</Link>
+                                </li>
+                            </>
+                        ) : (
                             <li>
-                                <Link to={'/create-item'}>Создать товар</Link>
+                                <Link to={"/login"}>Войти</Link>
                             </li>
-                            <li>
-                                <Link to={'/logout'}>Выйти</Link>
-                            </li>
-                        </>
+                        )}
                     </ul>
                 </nav>
             </header>
         </div>
-    )
-}
+    );
+};
 
-export default NavBar
+export default NavBar;

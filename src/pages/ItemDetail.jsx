@@ -1,57 +1,151 @@
-import { Link } from 'react-router-dom'
-import Input from '../components/Input'
-import Button from '../components/Button'
+import { Link, useNavigate, useParams } from "react-router-dom";
+import Input from "../components/Input";
+import Button from "../components/Button";
+import { api } from "../api/api";
+import { useState } from "react";
+import { useEffect } from "react";
+import { useUserStore } from "../store/useUserStore";
 
 const ItemDetail = () => {
+    const { id } = useParams();
+    const [item, setItem] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [bids, setBids] = useState([]);
+    const session = useUserStore((dfdfsdfs) => dfdfsdfs.session);
+    const navigate = useNavigate()
+
+    const loadBids = async () => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            await api
+                .getItemBids(id)
+                .then(setBids)
+                .catch(setError)
+                .finally(() => setIsLoading(false));
+        } catch (err) {
+            setError(err);
+        }
+    };
+
+    useEffect(() => {
+        api.getItem(id)
+            .then(setItem)
+            .catch(setError)
+            .finally(() => setIsLoading(false));
+
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        loadBids();
+    }, []);
+
+    const handleBid = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError(null);
+
+        const form = e.target;
+        const amount = Number(form.bidInput.value);
+
+        try {
+            await api.createBid({ id, amount });
+            form.reset();
+            api.getItem(id)
+                .then(setItem)
+                .catch(setError)
+                .finally(() => setIsLoading(false));
+            loadBids();
+        } catch (err) {
+            setError(err);
+        }
+    };
+
+    function deleteItem() {
+
+        if (item.bidCount > 0) {
+            setError("Удаление не возможно, есть ставки")
+            return
+        }
+        try {
+            api.deleteItems(id)
+            navigate("/")
+        } catch (e) {
+            setError(e)
+        }
+
+    }
+
+    if (isLoading) return <div className="container">Загрузка...</div>;
 
     return (
         <div className="container">
-            <Link to={'/'}>← Вернуться к списку товаров</Link>
+            <Link to={"/"}>← Вернуться к списку товаров</Link>
+            {session?.user?.id == item?.userId && (
+                <Button onClick={() => deleteItem()} >Удалить товарчик</Button>
+            )}
 
-            <div class="item-detail">
-                <div class="item-header">
+            {error && (
+                <div className="alert alert-error active">{error}</div>
+            )}
+
+            <div className="item-detail">
+                <div className="item-header">
                     <div>
-                        <img src="https:/..." class="item-image-large" />
+                        {item.imageUrl && (
+                            <img
+                                src={item.imageUrl}
+                                className="item-image-large"
+                            />
+                        )}
                     </div>
 
-                    <div class="item-info">
-                        <span class="item-status">Активное</span>
+                    <div className="item-info">
+                        <span className="item-status">Активное</span>
 
-                        <h1 class="item-title-large">Название</h1>
+                        <h1 className="item-title-large">{item.title}</h1>
 
-                        <div class="item-seller-info">
-                            <div class="seller-avatar">Первые 2 символа с юзернейма</div>
-                            <div class="seller-details">
-                                <div class="seller-name">
-Юзернейм
+                        <div className="item-seller-info">
+                            <div className="seller-avatar">
+                                {item.username.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div className="seller-details">
+                                <div className="seller-name">
+                                    {item.username}
                                 </div>
-                                <div class="seller-date">
-Когда создан
+                                <div className="seller-date">
+                                    {new Date(item.createdAt).toLocaleString(
+                                        "ru-RU",
+                                    )}
                                 </div>
                             </div>
                         </div>
 
-                        <div class="item-description-full">
-Описание
+                        <div className="item-description-full">
+                            {item.description}
                         </div>
 
-                        <div class="price-section">
-                            <div class="starting-price">Начальная цена:</div>
-                            <div class="current-price">Цена</div>
-                            <div class="highest-bid">
-                                Текущая ставка: Ставка
+                        <div className="price-section">
+                            <div className="starting-price">
+                                Начальная цена:
+                            </div>
+                            <div className="current-price">
+                                {item.price} Рррр.
+                            </div>
+                            <div className="highest-bid">
+                                Текущая ставка: {item.highestBid}
                             </div>
 
-                            <form class="bid-form">
+                            <form className="bid-form" onSubmit={handleBid}>
                                 <Input
                                     type="number"
                                     name="bidInput"
-                                    class="bid-input"
+                                    className="bid-input"
                                     placeholder="Введите вашу ставку (мин. стоимость + 1 рубль ₽)"
-                                    min={0}
+                                    min={item.highestBid ?? item.price}
                                     step="100"
                                 />
-                                <Button type="submit" class="btn-bid">
+                                <Button type="submit" className="btn-bid">
                                     Сделать ставку
                                 </Button>
                             </form>
@@ -59,73 +153,50 @@ const ItemDetail = () => {
                     </div>
                 </div>
 
-                <div class="bids-section">
-                    <div class="bids-header">
-                        <h2 class="bids-title">История ставок</h2>
-                        <span class="bids-count">5</span>
+                <div className="bids-section">
+                    <div className="bids-header">
+                        <h2 className="bids-title">История ставок</h2>
+                        <span className="bids-count">{item.bidCount}</span>
                     </div>
 
-                    <div class="bids-list">
-                        <div class="bid-item highest-bid-item">
-                            <div class="bid-user">
-                                <div class="bid-avatar">BB</div>
-                                <div class="bid-details">
-                                    <span class="bid-username">buyer_best</span>
-                                    <span class="bid-time">2 часа назад</span>
+                    {bids.length < 0 ? (
+                        <div className="container">Ставок нет</div>
+                    ) : (
+                        <div className="bids-list">
+                            {bids.map((item, index) => (
+                                <div
+                                    key={index}
+                                    className={`bid-item ${index == 0 && "highest-bid-item"}`}
+                                >
+                                    <div className="bid-user">
+                                        <div className="bid-avatar">
+                                            {item.username
+                                                .slice(0, 2)
+                                                .toUpperCase()}
+                                        </div>
+                                        <div className="bid-details">
+                                            <span className="bid-username">
+                                                {item.username}
+                                            </span>
+                                            <span className="bid-time">{}</span>
+                                        </div>
+                                        {index == 0 && (
+                                            <span className="highest-badge">
+                                                🏆 Лидирует
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="bid-amount">
+                                        {item.amount} ₽
+                                    </div>
                                 </div>
-                                <span class="highest-badge">🏆 Лидирует</span>
-                            </div>
-                            <div class="bid-amount">70 000 ₽</div>
+                            ))}
                         </div>
-
-                        <div class="bid-item">
-                            <div class="bid-user">
-                                <div class="bid-avatar">JD</div>
-                                <div class="bid-details">
-                                    <span class="bid-username">john_doe</span>
-                                    <span class="bid-time">5 часов назад</span>
-                                </div>
-                            </div>
-                            <div class="bid-amount">68 000 ₽</div>
-                        </div>
-
-                        <div class="bid-item">
-                            <div class="bid-user">
-                                <div class="bid-avatar">AL</div>
-                                <div class="bid-details">
-                                    <span class="bid-username">alice_tech</span>
-                                    <span class="bid-time">1 день назад</span>
-                                </div>
-                            </div>
-                            <div class="bid-amount">67 000 ₽</div>
-                        </div>
-
-                        <div class="bid-item">
-                            <div class="bid-user">
-                                <div class="bid-avatar">MK</div>
-                                <div class="bid-details">
-                                    <span class="bid-username">mike_k</span>
-                                    <span class="bid-time">1 день назад</span>
-                                </div>
-                            </div>
-                            <div class="bid-amount">66 000 ₽</div>
-                        </div>
-
-                        <div class="bid-item">
-                            <div class="bid-user">
-                                <div class="bid-avatar">ST</div>
-                                <div class="bid-details">
-                                    <span class="bid-username">sarah_tech</span>
-                                    <span class="bid-time">2 дня назад</span>
-                                </div>
-                            </div>
-                            <div class="bid-amount">65 500 ₽</div>
-                        </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>
-    )
-}
+    );
+};
 
-export default ItemDetail
+export default ItemDetail;
